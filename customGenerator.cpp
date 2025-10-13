@@ -12,13 +12,13 @@
 using namespace std;
 
 string HashGenerator::generateHash(string input){
-    // IMPROVEMENT #6: Better initialization - combine length with position-dependent mixing
+    // Better initialization - combine length with position-dependent mixing
     uint64_t hash = MIX_CONSTANT_1 ^ (static_cast<uint64_t>(input.length()) * MIX_CONSTANT_2);
     
-    // IMPROVEMENT #7: Add input length padding for better domain separation
+    // Add input length padding for better domain separation
     hash = varikliukas(hash, input.length() ^ MIX_CONSTANT_3);
 
-    // IMPROVEMENT #8: Process input in 8-byte blocks with improved mixing
+    // Process input in 8-byte blocks with improved mixing
     size_t i = 0;
     while (i + 8 <= input.length()) {
         uint64_t block = 0;
@@ -26,12 +26,12 @@ string HashGenerator::generateHash(string input){
             block |= (static_cast<uint64_t>(static_cast<unsigned char>(input[i + j])) << (j * 8));
         }
         
-        // IMPROVEMENT #9: Mix block position into hash for position sensitivity
+        // Mix block position into hash for position sensitivity
         hash = varikliukas(hash, block ^ (i * MIX_CONSTANT_3));
         i += 8;
     }
 
-    // IMPROVEMENT #10: Enhanced remainder processing with better padding
+    // Enhanced remainder processing with better padding
     if (i < input.length()) {
         uint64_t block = 0;
         size_t remaining = input.length() - i;
@@ -43,47 +43,65 @@ string HashGenerator::generateHash(string input){
         hash = varikliukas(hash, block);
     }
 
-    // IMPROVEMENT #11: Enhanced lookup table usage with double mixing
+    // Enhanced lookup table usage with double mixing
     uint64_t tableIndex1 = hash % LOOKUP_TABLE_SIZE;
     uint64_t tableIndex2 = (hash >> 16) % LOOKUP_TABLE_SIZE;
-    uint64_t tableSeed = prekesKodai[tableIndex1] ^ (prekesKodai[tableIndex2] << 32);
+    uint64_t tableSeed = static_cast<uint64_t>(prekesKodai[tableIndex1]) ^ (static_cast<uint64_t>(prekesKodai[tableIndex2]) << 32);
     hash = varikliukas(hash, tableSeed);
 
-    // IMPROVEMENT #12: Multiple finalization rounds with rotation
+    // Multiple finalization rounds with rotation
     for (int round = 0; round < MIXING_ROUNDS; round++) {
         hash = varikliukas(hash, rotl64(hash, 32));
     }
     
-    // IMPROVEMENT #13: Final diffusion step
+    // Final diffusion step
     hash = finalMix(hash);
 
-    // IMPROVEMENT #14: Use full 64-bit output (16 hex chars) for better collision resistance
+    // CHANGE #1: Generate 256-bit hash (same as SHA256) using 4x 64-bit values
+    // Create 4 different hash values from the original hash
+    uint64_t hash1 = hash;
+    uint64_t hash2 = finalMix(hash ^ MIX_CONSTANT_1);
+    uint64_t hash3 = finalMix(hash ^ MIX_CONSTANT_2);
+    uint64_t hash4 = finalMix(hash ^ MIX_CONSTANT_3);
+
+    // CHANGE #2: Force first 12 bits to be 0 (three '0' hex characters)
+    hash1 = hash1 & 0x0FFFFFFFFFFFFFFFULL;  // Clear top 4 bits
+    hash1 = hash1 & 0x00FFFFFFFFFFFFFFULL;  // Clear next 4 bits  
+    hash1 = hash1 & 0x000FFFFFFFFFFFFFULL;  // Clear next 4 bits
+
+    // Build 64 hex character string (256 bits)
     std::stringstream ss;
-    ss << std::setfill('0') << std::setw(16) << std::hex << hash;
+    ss << std::setfill('0') << std::hex;
+    ss << "000";  // CHANGE #2: Force first 3 hex chars to be '000'
+    ss << std::setw(13) << (hash1 & 0x000FFFFFFFFFFFFFULL);  // Remaining 13 chars from hash1
+    ss << std::setw(16) << hash2;  // Full 16 chars from hash2
+    ss << std::setw(16) << hash3;  // Full 16 chars from hash3
+    ss << std::setw(16) << hash4;  // Full 16 chars from hash4
+    
     string resultString = ss.str();
     return resultString;
 }
 
-// IMPROVEMENT #15: Enhanced mixing function with better avalanche properties
+// Enhanced mixing function with better avalanche properties
 uint64_t HashGenerator::varikliukas(uint64_t seed, uint64_t offset){
     // Combine input with rotation for better mixing
     uint64_t mixed = seed + offset + MIX_CONSTANT_1;
     
-    // IMPROVEMENT #16: Add rotation between XOR operations
+    // Add rotation between XOR operations
     mixed ^= rotl64(mixed, 33);
     mixed *= MIX_CONSTANT_2;
     mixed ^= rotr64(mixed, 29);
     mixed *= MIX_CONSTANT_3;
     mixed ^= rotl64(mixed, 32);
     
-    // IMPROVEMENT #17: Additional mixing pass
+    // Additional mixing pass
     mixed += rotr64(mixed, 17);
     mixed ^= MIX_CONSTANT_1;
     
     return mixed;
 }
 
-// IMPROVEMENT #18: New final mixing function for maximum diffusion
+// New final mixing function for maximum diffusion
 uint64_t HashGenerator::finalMix(uint64_t hash) {
     // Apply aggressive avalanche spreading
     hash ^= hash >> 33;
