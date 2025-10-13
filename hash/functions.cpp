@@ -14,7 +14,9 @@
 #include "functions.h"
 #include "customGenerator.h"
 
-/*std::string pasirinktiFaila(){
+/* for MAC
+
+std::string pasirinktiFaila(){
     while(true){
         try{
             //system("ls *.txt ../failaiHashavimui/*.txt 2>/dev/null > temp.txt");    
@@ -75,7 +77,6 @@ std::string failoNuskaitymas(){
 }
 
 
-//buvo izkomentinta
 namespace fs = std::filesystem;
 std::string pasirinktiFaila(){
     while(true){
@@ -121,45 +122,6 @@ std::string pasirinktiFaila(){
         }
     }
 }
-
-/*std::string failoNuskaitymas(){
-    std::string fileName = pasirinktiFaila();
-    std::ifstream f(fileName);
-    
-    if (!f.is_open()) {
-        throw std::runtime_error("Nepavyko atidaryti failo: " + fileName);
-    }
-    
-    std::string tekstas;
-    std::string eilute;
-    fs::path filePath(fileName);
-
-    if (filePath.filename() == "konstitucija.txt") {
-        int eiluciuSkaicus = 789;
-        int nuskaitymoEilutes;
-        std::cout << " 'Konstitucija.txt' nuskaitomas eilučių kiekis: ";
-        std::cin >> nuskaitymoEilutes;
-
-        int nuskaitytosEilutes = 0;
-        while (getline(f, eilute) && nuskaitytosEilutes < nuskaitymoEilutes) {
-            tekstas += eilute;
-            nuskaitytosEilutes++;
-            if (nuskaitytosEilutes < nuskaitymoEilutes && !f.eof()) {
-                tekstas += '\n';}
-        }
-    } else {
-        while (getline(f, eilute)) {
-            tekstas += eilute;
-            if (!f.eof()) {
-                tekstas += '\n';
-            }
-        }
-    }
-    f.close();
-    return tekstas;
-}*/
-    //iki cia uzkomentinta buvo
-
 
 // Funkcija atsitiktiniam string generavimui
 std::string stringGeneratorius(int length, std::mt19937& gen) {
