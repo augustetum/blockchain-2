@@ -1,27 +1,12 @@
-#include <iostream>
-#include <ctime>
-using namespace std;
+#include "BlockHeader.h"
 
-class BlockHeader {
-    string prevBlockHash;
-    time_t timestamp;
-    int version;  
-    string merkle_root;
-    int nonce;
-    int difficulty;
+BlockHeader::BlockHeader(std::string prev, int diff, int ver)
+    : prevBlockHash(prev), difficulty(diff), version(ver), nonce(0), merkle_root("") {
+    timestamp = time(nullptr);
+}
 
-public:
-    BlockHeader(string prev, int diff, int ver = 1) 
-        : prevBlockHash(prev), 
-          difficulty(diff), 
-          version(ver),
-          nonce(0), 
-          merkle_root("") {
-        timestamp = time(nullptr);
-    }
-    
-    void setVersion(int v) { version = v; }
-    void setMerkleRoot(string mr) { merkle_root = mr; }
-    void incrementNonce() { nonce++; }
-    void resetNonce() { nonce = 0; }
-};
+void BlockHeader::setVersion(int v) { version = v; }
+void BlockHeader::setMerkleRoot(std::string mr) { merkle_root = mr; }
+void BlockHeader::incrementNonce() { nonce++; }
+void BlockHeader::resetNonce() { nonce = 0; }
+void BlockHeader::setNonce(int nc) { nonce = nc; }
