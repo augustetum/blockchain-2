@@ -1,3 +1,4 @@
+//customGenerator.cpp
 #include "customGenerator.h"
 #include <iostream>
 #include <string>
@@ -10,82 +11,88 @@
 
 using namespace std;
 
-    string HashGenerator::generateHash(string input){
-        // Initialize with a fixed IV based on input length
-        uint64_t hash = MIX_CONSTANT_1 ^ (static_cast<uint64_t>(input.length()) * MIX_CONSTANT_2);
+string HashGenerator::generateHash(string input){
+    // IMPROVEMENT #6: Better initialization - combine length with position-dependent mixing
+    uint64_t hash = MIX_CONSTANT_1 ^ (static_cast<uint64_t>(input.length()) * MIX_CONSTANT_2);
+    
+    // IMPROVEMENT #7: Add input length padding for better domain separation
+    hash = varikliukas(hash, input.length() ^ MIX_CONSTANT_3);
 
-        // Process input in blocks of 8 bytes
-        size_t i = 0;
-        while (i + 8 <= input.length()) {
-            // Read 8 bytes as uint64_t
-            uint64_t block = 0;
-            for (int j = 0; j < 8; j++) {
-                block |= (static_cast<uint64_t>(static_cast<unsigned char>(input[i + j])) << (j * 8));
-            }
-            hash = varikliukas(hash, block);
-            i += 8;
+    // IMPROVEMENT #8: Process input in 8-byte blocks with improved mixing
+    size_t i = 0;
+    while (i + 8 <= input.length()) {
+        uint64_t block = 0;
+        for (int j = 0; j < 8; j++) {
+            block |= (static_cast<uint64_t>(static_cast<unsigned char>(input[i + j])) << (j * 8));
         }
-
-        // Process remaining bytes
-        if (i < input.length()) {
-            uint64_t block = 0;
-            size_t remaining = input.length() - i;
-            for (size_t j = 0; j < remaining; j++) {
-                block |= (static_cast<uint64_t>(static_cast<unsigned char>(input[i + j])) << (j * 8));
-            }
-            // Mix in the number of remaining bytes to differentiate padding
-            block ^= (remaining << 56);
-            hash = varikliukas(hash, block);
-        }
-
-        // Use lookup table as final mixing step
-        uint64_t tableIndex = hash % LOOKUP_TABLE_SIZE;
-        uint64_t tableSeed = prekesKodai[tableIndex];
-        hash = varikliukas(hash, tableSeed);
-
-        // Apply multiple finalization rounds for better avalanche
-        for (int round = 0; round < MIXING_ROUNDS; round++) {
-            hash = varikliukas(hash, hash >> 32);
-        }
-
-        // Output first 8 hex characters (32 bits) for consistency with tests
-        std::stringstream ss;
-        ss << std::setfill('0') << std::setw(8) << std::hex << (hash & 0xFFFFFFFF);
-        string resultString = ss.str();
-        return resultString;
+        
+        // IMPROVEMENT #9: Mix block position into hash for position sensitivity
+        hash = varikliukas(hash, block ^ (i * MIX_CONSTANT_3));
+        i += 8;
     }
 
-    // IMPROVEMENT #2: Use uint64_t to prevent overflow in calculations
-    // IMPROVEMENT #9: Fixed integer overflow risk in weightedSum
-    uint64_t HashGenerator::weightedSum(string input){
-        uint64_t count = 1;
-        uint64_t weightedSum = 0;
-
-        for (unsigned char c : input){
-            // Using uint64_t prevents overflow for long inputs
-            weightedSum += static_cast<uint64_t>(c) * count;
-            count++;
+    // IMPROVEMENT #10: Enhanced remainder processing with better padding
+    if (i < input.length()) {
+        uint64_t block = 0;
+        size_t remaining = input.length() - i;
+        for (size_t j = 0; j < remaining; j++) {
+            block |= (static_cast<uint64_t>(static_cast<unsigned char>(input[i + j])) << (j * 8));
         }
-
-        return weightedSum;  // Return full value, modulo applied at usage point
+        // Mix in both remaining count and position for uniqueness
+        block ^= (remaining << 56) ^ (i << 48);
+        hash = varikliukas(hash, block);
     }
 
-    // IMPROVEMENT #3: Strengthened mixing function with better constants and operations
-    // IMPROVEMENT #4: Returns 64-bit value for 16 hex character output
-    uint64_t HashGenerator::varikliukas(uint64_t seed, uint64_t offset){
-        // Apply mixing with XOR shifts and rotations for better avalanche effect
-        uint64_t mixed = seed + offset + MIX_CONSTANT_1;
+    // IMPROVEMENT #11: Enhanced lookup table usage with double mixing
+    uint64_t tableIndex1 = hash % LOOKUP_TABLE_SIZE;
+    uint64_t tableIndex2 = (hash >> 16) % LOOKUP_TABLE_SIZE;
+    uint64_t tableSeed = prekesKodai[tableIndex1] ^ (prekesKodai[tableIndex2] << 32);
+    hash = varikliukas(hash, tableSeed);
 
-        // XOR-shift operations for better bit distribution
-        mixed ^= mixed >> 33;
-        mixed *= MIX_CONSTANT_2;
-        mixed ^= mixed >> 29;
-        mixed *= MIX_CONSTANT_1;
-        mixed ^= mixed >> 32;
-
-        return mixed;
+    // IMPROVEMENT #12: Multiple finalization rounds with rotation
+    for (int round = 0; round < MIXING_ROUNDS; round++) {
+        hash = varikliukas(hash, rotl64(hash, 32));
     }
+    
+    // IMPROVEMENT #13: Final diffusion step
+    hash = finalMix(hash);
 
+    // IMPROVEMENT #14: Use full 64-bit output (16 hex chars) for better collision resistance
+    std::stringstream ss;
+    ss << std::setfill('0') << std::setw(16) << std::hex << hash;
+    string resultString = ss.str();
+    return resultString;
+}
+
+// IMPROVEMENT #15: Enhanced mixing function with better avalanche properties
+uint64_t HashGenerator::varikliukas(uint64_t seed, uint64_t offset){
+    // Combine input with rotation for better mixing
+    uint64_t mixed = seed + offset + MIX_CONSTANT_1;
+    
+    // IMPROVEMENT #16: Add rotation between XOR operations
+    mixed ^= rotl64(mixed, 33);
+    mixed *= MIX_CONSTANT_2;
+    mixed ^= rotr64(mixed, 29);
+    mixed *= MIX_CONSTANT_3;
+    mixed ^= rotl64(mixed, 32);
+    
+    // IMPROVEMENT #17: Additional mixing pass
+    mixed += rotr64(mixed, 17);
+    mixed ^= MIX_CONSTANT_1;
+    
+    return mixed;
+}
+
+// IMPROVEMENT #18: New final mixing function for maximum diffusion
+uint64_t HashGenerator::finalMix(uint64_t hash) {
+    // Apply aggressive avalanche spreading
+    hash ^= hash >> 33;
+    hash *= 0xFF51AFD7ED558CCDULL;
+    hash ^= hash >> 33;
+    hash *= 0xC4CEB9FE1A85EC53ULL;
+    hash ^= hash >> 33;
+    return hash;
+}
 
 const int HashGenerator::prekesKodai[440] = {
     375489, 396069, 376381, 347557, 376206, 405686, 410243, 344899, 375468, 381335,
