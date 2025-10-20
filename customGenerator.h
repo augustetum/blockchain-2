@@ -7,17 +7,31 @@
 class HashGenerator {
 private:
     static const int prekesKodai[440];
-
-    // IMPROVEMENT #6: Remove magic numbers - define constants
     static const int LOOKUP_TABLE_SIZE = 440;
-    static const int MIXING_ROUNDS = 3;  // IMPROVEMENT #10: Multiple rounds for better avalanche effect
-    static const uint64_t MIX_CONSTANT_1 = 0x9E3779B97F4A7C15ULL;  // IMPROVEMENT #3: Stronger mixing constants
-    static const uint64_t MIX_CONSTANT_2 = 0x85EBCA6B3C4E9A5DULL;  // Based on golden ratio and random primes
+    static const int MIXING_ROUNDS = 4;  // IMPROVEMENT #1: Increased from 3 to 4 for better avalanche
+    
+    // IMPROVEMENT #2: Better mixing constants (prime-based, tested for avalanche)
+    static const uint64_t MIX_CONSTANT_1 = 0x517CC1B727220A95ULL;
+    static const uint64_t MIX_CONSTANT_2 = 0xBF58476D1CE4E5B9ULL;
+    static const uint64_t MIX_CONSTANT_3 = 0x94D049BB133111EBULL;
+    
+    // IMPROVEMENT #3: Add rotation helper for better bit mixing
+    inline uint64_t rotl64(uint64_t x, int r) const {
+        return (x << r) | (x >> (64 - r));
+    }
+    
+    inline uint64_t rotr64(uint64_t x, int r) const {
+        return (x >> r) | (x << (64 - r));
+    }
 
 public:
     std::string generateHash(std::string input);
-    static uint64_t weightedSum(std::string input);  // IMPROVEMENT #2: Use uint64_t to prevent overflow
-    uint64_t varikliukas(uint64_t seed, uint64_t offset);  // IMPROVEMENT #3,4: Return 64-bit for 16 hex output
+    
+    // IMPROVEMENT #4: Enhanced mixing function with rotation
+    uint64_t varikliukas(uint64_t seed, uint64_t offset);
+    
+    // IMPROVEMENT #5: Add secondary mixing for final diffusion
+    uint64_t finalMix(uint64_t hash);
 };
 
 #endif

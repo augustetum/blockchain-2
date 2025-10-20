@@ -9,17 +9,16 @@
 #include <random>
 #include <unordered_map>
 #include <utility>
+#include <algorithm> 
 #include <iomanip>
 #include "functions.h"
 #include "customGenerator.h"
 
-
-
-std::string pasirinktiFaila(){
+/*std::string pasirinktiFaila(){
     while(true){
         try{
-            system("ls *.txt ../failaiHashavimui/*.txt 2>/dev/null > temp.txt");    
-            //system("for /r %A in (*.txt) do @echo %~nxA >> temp.txt"); //windowsam
+            //system("ls *.txt ../failaiHashavimui/*.txt 2>/dev/null > temp.txt");    
+            system("for /r %A in (*.txt) do @echo %~nxA >> temp.txt"); //windowsam
             std::ifstream tempFail("temp.txt");
             std::vector<std::string> failuPav;
      
@@ -29,8 +28,8 @@ std::string pasirinktiFaila(){
 
             }
             tempFail.close();
-            system("rm temp.txt"); 
-            //system("del temp.txt"); windowsam
+            //system("rm temp.txt"); 
+            system("del temp.txt");
             std::string fail;
 
             std::cout << "Pasirinkite norimą failą" << std::endl;
@@ -56,7 +55,7 @@ std::string pasirinktiFaila(){
             throw;
         }
     }
-}
+}*/
 
 
 std::string failoNuskaitymas(){
@@ -76,12 +75,12 @@ std::string failoNuskaitymas(){
 }
 
 
-/*
+//buvo izkomentinta
 namespace fs = std::filesystem;
 std::string pasirinktiFaila(){
     while(true){
         try{
-            fs::path folderPath = "../failaiHashavimui";
+            fs::path folderPath = "failaiHashavimui";
             if (!fs::exists(folderPath) || !fs::is_directory(folderPath)) {
                 throw std::runtime_error("failaiHashavimui nerastas");
             }
@@ -123,7 +122,7 @@ std::string pasirinktiFaila(){
     }
 }
 
-std::string failoNuskaitymas(){
+/*std::string failoNuskaitymas(){
     std::string fileName = pasirinktiFaila();
     std::ifstream f(fileName);
     
@@ -158,8 +157,8 @@ std::string failoNuskaitymas(){
     }
     f.close();
     return tekstas;
-}
-    */
+}*/
+    //iki cia uzkomentinta buvo
 
 
 // Funkcija atsitiktiniam string generavimui
