@@ -10,7 +10,6 @@ using std::string;
 
 const int TRANSACTION_AMOUNT = 10000;
 
-
 std::vector<std::string> loadUsersFromFile(const std::string& filename) {
     std::vector<std::string> userPublicKeys;
     std::ifstream file(filename);
@@ -81,7 +80,7 @@ void saveToFile(const std::vector<Transaction>& transactions, const std::string&
 
 int main() {
     auto userPublicKeys = loadUsersFromFile("users.txt");
-    auto transactions = generateTransactions(userPublicKeys, 10000);
+    auto transactions = generateTransactions(userPublicKeys, TRANSACTION_AMOUNT);
     saveToFile(transactions, "transactions.txt");
     return 0;
 }
