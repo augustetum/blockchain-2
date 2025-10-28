@@ -9,7 +9,6 @@ private:
     string senderKey;           
     string receiverKey; 
     double amount;        
-    time_t timestamp; 
 
 public:
     string transactionID;
@@ -19,7 +18,6 @@ public:
     string getSender() const;
     string getReceiver() const;
     double getAmount() const;
-    time_t getTimestamp() const;
     string getTransactionId() const;
     
     string calculateTransactionId() const;

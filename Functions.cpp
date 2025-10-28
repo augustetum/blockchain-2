@@ -25,7 +25,4 @@ std::unordered_map<std::string, User> loadUsersFromFile (const std::string& file
 
         userMap[publicKey] = user;
     }
-
-
-
 }
