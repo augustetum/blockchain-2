@@ -10,7 +10,6 @@ using std::string;
 const int USER_AMOUNT = 1000;
 
 int main() {
-    int users = 0;
     std::ofstream userFile("users.txt");
     std::mt19937 gen(time(NULL)); 
     std::uniform_int_distribution<> distr(100, 1000000);
