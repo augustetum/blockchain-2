@@ -20,7 +20,7 @@ int main() {
     for(int i = 1; i <= USER_AMOUNT; i++){
         
         string name = "Name" + std::to_string(i);
-        string publicKey = hasher.generateHash(std::to_string(i));
+        string publicKey = hasher.generateHash(std::to_string(i), 0); //irgi difficulty 0
         int balance = distr(gen);
         User user = User(name, publicKey, balance);
         
