@@ -10,47 +10,53 @@
 
 using namespace std;
 
-string HashGenerator::generateHash(string input, int difficulty){
-    // Better initialization - combine length with position-dependent mixing
-    uint64_t hash = MIX_CONSTANT_1 ^ (static_cast<uint64_t>(input.length()) * MIX_CONSTANT_2);
+string HashGenerator::generateHash(string input){
+    // Initialize with a good seed
+    uint64_t hash = MIX_CONSTANT_1;
 
-    hash = varikliukas(hash, input.length() ^ MIX_CONSTANT_3);
+    // Mix in the length first, but with proper avalanche
+    hash = varikliukas(hash, static_cast<uint64_t>(input.length()) * MIX_CONSTANT_2);
 
-    size_t i = 0;
-    while (i + 8 <= input.length())
+    // Process all characters - each character gets mixed thoroughly
+    for (size_t i = 0; i < input.length(); i++)
     {
-        uint64_t block = 0;
-        for (int j = 0; j < 8; j++)
-        {
-            block |= (static_cast<uint64_t>(static_cast<unsigned char>(input[i + j])) << (j * 8));
-        }
+        uint64_t charValue = static_cast<uint64_t>(static_cast<unsigned char>(input[i]));
 
-        hash = varikliukas(hash, block ^ (i * MIX_CONSTANT_3));
-        i += 8;
+        // Combine character value with position information
+        // Use prime number multiplication for better distribution
+        uint64_t charMix = charValue * 0x9E3779B97F4A7C15ULL;  // Golden ratio prime
+        charMix ^= (i * MIX_CONSTANT_1);
+        charMix = rotl64(charMix, 13);
+
+        // Mix into main hash
+        hash ^= charMix;
+        hash = varikliukas(hash, charValue + (i << 8));
+
+        // Rotate hash to ensure position matters
+        hash = rotl64(hash, 7);
     }
 
-    if (i < input.length())
-    {
-        uint64_t block = 0;
-        size_t remaining = input.length() - i;
-        for (size_t j = 0; j < remaining; j++)
-        {
-            block |= (static_cast<uint64_t>(static_cast<unsigned char>(input[i + j])) << (j * 8));
-        }
-        block ^= (remaining << 56) ^ (i << 48);
-        hash = varikliukas(hash, block);
-    }
+    // Final length-dependent mixing to prevent extension attacks
+    hash = varikliukas(hash, (input.length() << 32) ^ MIX_CONSTANT_3);
 
-    // Enhanced lookup table usage with double mixing
+    // Use lookup table for additional non-linearity
     uint64_t tableIndex1 = hash % LOOKUP_TABLE_SIZE;
-    uint64_t tableIndex2 = (hash >> 16) % LOOKUP_TABLE_SIZE;
-    uint64_t tableSeed = static_cast<uint64_t>(prekesKodai[tableIndex1]) ^ (static_cast<uint64_t>(prekesKodai[tableIndex2]) << 32);
+    uint64_t tableIndex2 = (hash >> 21) % LOOKUP_TABLE_SIZE;
+    uint64_t tableIndex3 = (hash >> 42) % LOOKUP_TABLE_SIZE;
+
+    uint64_t tableSeed = static_cast<uint64_t>(prekesKodai[tableIndex1]);
+    tableSeed ^= static_cast<uint64_t>(prekesKodai[tableIndex2]) << 16;
+    tableSeed ^= static_cast<uint64_t>(prekesKodai[tableIndex3]) << 32;
+
     hash = varikliukas(hash, tableSeed);
 
-    for (int round = 0; round < MIXING_ROUNDS; round++)
+    // Multiple rounds of intensive mixing for avalanche effect
+    for (int round = 0; round < MIXING_ROUNDS * 3; round++)
     {
-        hash = varikliukas(hash, rotl64(hash, 32));
+        hash = varikliukas(hash, rotl64(hash, 29) ^ rotr64(hash, 19));
+        hash ^= MIX_CONSTANT_2;
     }
+
     hash = finalMix(hash);
 
     // Generate 256-bit hash (same as SHA256) using 4x 64-bit values
@@ -70,14 +76,8 @@ string HashGenerator::generateHash(string input, int difficulty){
 
     string resultString = ss.str();
 
-    // Apply difficulty: replace first 'difficulty' characters with '0'
-    // This ensures the hash starts with the required number of zeros
-    if (difficulty > 0 && difficulty <= 64) {
-        for (int i = 0; i < difficulty; i++) {
-            resultString[i] = '0';
-        }
-    }
-
+    // Return the actual hash - no artificial difficulty enforcement
+    // Mining must be done by incrementing nonce until a valid hash is found
     return resultString;
 }
 

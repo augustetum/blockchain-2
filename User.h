@@ -8,7 +8,7 @@ private:
     int balance;
 public:
 
-    User();
+    User() : name(""), publicKey(""), balance(0) {}
     User(string name_, string publicKey_, int balance_) {name = name_, publicKey = publicKey_, balance = balance_; }
     void setName(string name_) {name = name_; }
     void setPublicKey(string publicKey_) {publicKey = publicKey_; }
