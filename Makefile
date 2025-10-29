@@ -1,4 +1,3 @@
-# Detect operating system
 ifeq ($(OS),Windows_NT)
     # Windows
     RM = del /Q
@@ -7,7 +6,7 @@ ifeq ($(OS),Windows_NT)
     LIBS = -lssl -lcrypto -lws2_32 -lcrypt32
     SEP = \\
 else
-    # macOS/Linux
+    # macOS
     RM = rm -f
     RM_DIR = rm -rf
     EXE = 
@@ -15,12 +14,11 @@ else
     SEP = /
 endif
 
-# Compiler settings
 CXX = g++
 CXXFLAGS = -std=c++17 -O3
 INCLUDES = -Iinclude -Ihash
 
-# Main blockchain program
+# Main program
 blockchain$(EXE): Program.o Block.o BlockHeader.o Transaction.o Functions.o merkleTree.o customGenerator.o
 	$(CXX) $(CXXFLAGS) Program.o Block.o BlockHeader.o Transaction.o Functions.o merkleTree.o customGenerator.o -o blockchain$(EXE) $(LIBS)
 
@@ -45,21 +43,18 @@ merkleTree.o: merkleTree.cpp merkleTree.h
 customGenerator.o: customGenerator.cpp customGenerator.h
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c customGenerator.cpp -o customGenerator.o
 
-# User generator
 usergen$(EXE): generators/userGenerator.o customGenerator.o
 	$(CXX) $(CXXFLAGS) generators/userGenerator.o customGenerator.o -o usergen$(EXE) $(LIBS)
 
 generators/userGenerator.o: generators/userGenerator.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c generators/userGenerator.cpp -o generators/userGenerator.o
 
-# Transaction generator
 txgen$(EXE): generators/transactionGenerator.o Transaction.o customGenerator.o
 	$(CXX) $(CXXFLAGS) generators/transactionGenerator.o Transaction.o customGenerator.o -o txgen$(EXE) $(LIBS)
 
 generators/transactionGenerator.o: generators/transactionGenerator.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c generators/transactionGenerator.cpp -o generators/transactionGenerator.o
 
-# Clean targets
 clean:
 ifeq ($(OS),Windows_NT)
 	-$(RM) *.o 2>nul
@@ -69,7 +64,6 @@ else
 	$(RM) *.o generators/*.o blockchain usergen txgen
 endif
 
-# Run targets
 run: blockchain$(EXE)
 	.$(SEP)blockchain$(EXE)
 
