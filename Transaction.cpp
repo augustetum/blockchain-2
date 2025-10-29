@@ -1,6 +1,6 @@
 #include "Transaction.h"
 #include <iostream>
-#include "hash/customGenerator.h"
+#include "customGenerator.h"
 
 using namespace std;
 

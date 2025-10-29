@@ -1,5 +1,5 @@
-#include "../hash/customGenerator.h"
-#include "../include/merkleTree.h"
+#include "customGenerator.h"
+#include "merkleTree.h"
 #include <iostream>
 #include <vector>
 

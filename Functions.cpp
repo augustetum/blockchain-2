@@ -4,6 +4,7 @@
 #include <vector>
 #include <chrono>
 #include "User.h"
+#include <unordered_map>
 #include "Transaction.h"
 #include "Block.h"
 using std::string;

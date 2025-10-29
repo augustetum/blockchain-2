@@ -5,7 +5,7 @@
 #include <vector>
 #include "BlockHeader.h"
 #include "Transaction.h"
-#include "include/merkleTree.h"
+#include "merkleTree.h"
 using namespace std;
 
 class Block {

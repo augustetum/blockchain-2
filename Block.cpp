@@ -1,5 +1,5 @@
 #include "Block.h"
-#include "hash/customGenerator.h"
+#include "customGenerator.h"
 #include <iostream>
 #include <iomanip>
 

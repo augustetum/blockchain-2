@@ -11,35 +11,23 @@
 using namespace std;
 
 string HashGenerator::generateHash(string input){
-    // Initialize with a good seed
     uint64_t hash = MIX_CONSTANT_1;
-
-    // Mix in the length first, but with proper avalanche
     hash = varikliukas(hash, static_cast<uint64_t>(input.length()) * MIX_CONSTANT_2);
 
-    // Process all characters - each character gets mixed thoroughly
     for (size_t i = 0; i < input.length(); i++)
     {
         uint64_t charValue = static_cast<uint64_t>(static_cast<unsigned char>(input[i]));
-
-        // Combine character value with position information
-        // Use prime number multiplication for better distribution
-        uint64_t charMix = charValue * 0x9E3779B97F4A7C15ULL;  // Golden ratio prime
+        uint64_t charMix = charValue * 0x9E3779B97F4A7C15ULL;  // Golden ratio 
         charMix ^= (i * MIX_CONSTANT_1);
         charMix = rotl64(charMix, 13);
 
-        // Mix into main hash
         hash ^= charMix;
         hash = varikliukas(hash, charValue + (i << 8));
-
-        // Rotate hash to ensure position matters
         hash = rotl64(hash, 7);
     }
 
-    // Final length-dependent mixing to prevent extension attacks
     hash = varikliukas(hash, (input.length() << 32) ^ MIX_CONSTANT_3);
 
-    // Use lookup table for additional non-linearity
     uint64_t tableIndex1 = hash % LOOKUP_TABLE_SIZE;
     uint64_t tableIndex2 = (hash >> 21) % LOOKUP_TABLE_SIZE;
     uint64_t tableIndex3 = (hash >> 42) % LOOKUP_TABLE_SIZE;
@@ -50,7 +38,6 @@ string HashGenerator::generateHash(string input){
 
     hash = varikliukas(hash, tableSeed);
 
-    // Multiple rounds of intensive mixing for avalanche effect
     for (int round = 0; round < MIXING_ROUNDS * 3; round++)
     {
         hash = varikliukas(hash, rotl64(hash, 29) ^ rotr64(hash, 19));
@@ -59,14 +46,11 @@ string HashGenerator::generateHash(string input){
 
     hash = finalMix(hash);
 
-    // Generate 256-bit hash (same as SHA256) using 4x 64-bit values
-    // Create 4 different hash values from the original hash
     uint64_t hash1 = hash;
     uint64_t hash2 = finalMix(hash ^ MIX_CONSTANT_1);
     uint64_t hash3 = finalMix(hash ^ MIX_CONSTANT_2);
     uint64_t hash4 = finalMix(hash ^ MIX_CONSTANT_3);
 
-    // Build 64 hex character string (256 bits) first
     std::stringstream ss;
     ss << std::setfill('0') << std::hex;
     ss << std::setw(16) << hash1;
@@ -76,8 +60,6 @@ string HashGenerator::generateHash(string input){
 
     string resultString = ss.str();
 
-    // Return the actual hash - no artificial difficulty enforcement
-    // Mining must be done by incrementing nonce until a valid hash is found
     return resultString;
 }
 
@@ -107,13 +89,11 @@ uint64_t HashGenerator::finalMix(uint64_t hash)
     return hash;
 }
 
-// Validates if a hash meets the difficulty requirement
 bool HashGenerator::validateHashDifficulty(const std::string& hash, int difficulty) {
     if (difficulty <= 0 || difficulty > hash.length()) {
-        return true; // Invalid difficulty settings pass validation
+        return true; 
     }
 
-    // Check if first 'difficulty' characters are all '0'
     for (int i = 0; i < difficulty; i++) {
         if (hash[i] != '0') {
             return false;
