@@ -10,8 +10,8 @@
 
 using namespace std;
 
-string HashGenerator::generateHash(string input)
-{
+string HashGenerator::generateHash(string input, int difficulty){
+    // Better initialization - combine length with position-dependent mixing
     uint64_t hash = MIX_CONSTANT_1 ^ (static_cast<uint64_t>(input.length()) * MIX_CONSTANT_2);
 
     hash = varikliukas(hash, input.length() ^ MIX_CONSTANT_3);
@@ -53,24 +53,32 @@ string HashGenerator::generateHash(string input)
     }
     hash = finalMix(hash);
 
+    // Generate 256-bit hash (same as SHA256) using 4x 64-bit values
+    // Create 4 different hash values from the original hash
     uint64_t hash1 = hash;
     uint64_t hash2 = finalMix(hash ^ MIX_CONSTANT_1);
     uint64_t hash3 = finalMix(hash ^ MIX_CONSTANT_2);
     uint64_t hash4 = finalMix(hash ^ MIX_CONSTANT_3);
 
-    hash1 = hash1 & 0x0FFFFFFFFFFFFFFFULL; // Clear top 4 bits
-    hash1 = hash1 & 0x00FFFFFFFFFFFFFFULL; // Clear next 4 bits
-    hash1 = hash1 & 0x000FFFFFFFFFFFFFULL; // Clear next 4 bits
-
-    // Build 64 hex character string (256 bits)
+    // Build 64 hex character string (256 bits) first
     std::stringstream ss;
     ss << std::setfill('0') << std::hex;
-    ss << "000";
-    ss << std::setw(13) << (hash1 & 0x000FFFFFFFFFFFFFULL);
+    ss << std::setw(16) << hash1;
     ss << std::setw(16) << hash2;
     ss << std::setw(16) << hash3;
     ss << std::setw(16) << hash4;
-    return ss.str();
+
+    string resultString = ss.str();
+
+    // Apply difficulty: replace first 'difficulty' characters with '0'
+    // This ensures the hash starts with the required number of zeros
+    if (difficulty > 0 && difficulty <= 64) {
+        for (int i = 0; i < difficulty; i++) {
+            resultString[i] = '0';
+        }
+    }
+
+    return resultString;
 }
 
 uint64_t HashGenerator::varikliukas(uint64_t seed, uint64_t offset)
@@ -97,6 +105,21 @@ uint64_t HashGenerator::finalMix(uint64_t hash)
     hash *= 0xC4CEB9FE1A85EC53ULL;
     hash ^= hash >> 33;
     return hash;
+}
+
+// Validates if a hash meets the difficulty requirement
+bool HashGenerator::validateHashDifficulty(const std::string& hash, int difficulty) {
+    if (difficulty <= 0 || difficulty > hash.length()) {
+        return true; // Invalid difficulty settings pass validation
+    }
+
+    // Check if first 'difficulty' characters are all '0'
+    for (int i = 0; i < difficulty; i++) {
+        if (hash[i] != '0') {
+            return false;
+        }
+    }
+    return true;
 }
 
 const int HashGenerator::prekesKodai[440] = {

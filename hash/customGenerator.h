@@ -26,7 +26,8 @@ private:
     }
 
 public:
-    std::string generateHash(std::string input);
+    std::string generateHash(std::string input, int difficulty = 3);
+    bool validateHashDifficulty(const std::string& hash, int difficulty);
     uint64_t varikliukas(uint64_t seed, uint64_t offset);
     uint64_t finalMix(uint64_t hash);
 };
