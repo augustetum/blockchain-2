@@ -6,7 +6,7 @@
 
 Block::Block(const string& prevHash, int difficulty, const vector<Transaction>& txs)
     : header(prevHash, difficulty), transactions(txs) {
-    buildMerkleTree();
+    buildMerkleTree();//isimti konstruktoriui, kad neminintu is karto
 }
 
 void Block::buildMerkleTree() {
