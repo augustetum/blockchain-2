@@ -3,6 +3,10 @@
 #include <sstream>
 #include <vector>
 #include <chrono>
+#include <algorithm>
+#include <random>
+#include <atomic>
+#include <omp.h>
 #include "User.h"
 #include <unordered_map>
 #include "Transaction.h"
