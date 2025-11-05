@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <atomic>
 #include "BlockHeader.h"
 #include "Transaction.h"
 #include "merkleTree.h"
@@ -21,9 +22,9 @@ public:
     vector<Transaction> getTransactions() const { return transactions; }
     string getBlockHash() const { return blockHash; }
 
-
     void buildMerkleTree();
     string calculateBlockHash();
+    bool mineBlockParallel(atomic<bool>& stopFlag); 
     void mineBlock();
     bool isHashValid(const string& hash, int difficulty) const;
     void print() const;

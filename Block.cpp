@@ -2,11 +2,11 @@
 #include "customGenerator.h"
 #include <iostream>
 #include <iomanip>
+#include <atomic>
 
 Block::Block(const string& prevHash, int difficulty, const vector<Transaction>& txs)
     : header(prevHash, difficulty), transactions(txs) {
     buildMerkleTree();
-    mineBlock();  
 }
 
 void Block::buildMerkleTree() {
@@ -37,9 +37,23 @@ string Block::calculateBlockHash() {
     return hasher.generateHash(data);
 }
 
-void Block::mineBlock() {
-    header.resetNonce(); 
+bool Block::mineBlockParallel(atomic<bool>& stopFlag) {
+    header.resetNonce();
 
+    while (!stopFlag.load()) {
+        blockHash = calculateBlockHash();
+
+        if (isHashValid(blockHash, header.getDifficulty())) {
+            return true; //if the thread mined first
+        }
+        header.incrementNonce();
+    }
+    return false;  //terminating 
+}
+
+void Block::mineBlock() {
+    header.resetNonce();
+    
     cout << "Mining block..." << endl;
     int attempts = 0;
 
