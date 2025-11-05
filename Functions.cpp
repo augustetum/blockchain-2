@@ -3,13 +3,16 @@
 #include <sstream>
 #include <vector>
 #include <chrono>
+#include <algorithm>
+#include <random>
+#include <atomic>
+#include <omp.h>
 #include "User.h"
 #include <unordered_map>
 #include "customGenerator.h"
 #include "Transaction.h"
 #include "Block.h"
 using std::string;
-
 std::unordered_map<std::string, User> loadUsersFromFile (const std::string& filename) {
     std::unordered_map<std::string, User> userMap; 
     std::ifstream file(filename);
@@ -80,48 +83,133 @@ bool processTransactions(const std::vector<Transaction>& transactions,
 
 std::vector<Block> mineBlockchain(std::vector<Transaction>& transactionPool,
                                   std::unordered_map<std::string, User>& users,
-                                  int txPerBlock = 100,
-                                  int difficulty = 3) {
+                                  int txPerBlock,
+                                  int difficulty) {
     std::vector<Block> blockchain;
-    std::string prevHash = "0000000000000000000000000000000000000000000000000000000000000000"; //genesis hashas
+    std::string prevHash = "0000000000000000000000000000000000000000000000000000000000000000";
     int blockNumber = 0;
+    const int NUM_THREADS = 5;
+    const int ATTEMPT_INCREMENT = 1000;
 
     std::cout << "========================================" << std::endl;
     std::cout << "Total transactions to process: " << transactionPool.size() << std::endl;
     std::cout << "Transactions per block: " << txPerBlock << std::endl;
     std::cout << "Difficulty: " << difficulty << " leading zeros" << std::endl;
+    std::cout << "Using " << NUM_THREADS << " parallel mining threads" << std::endl;
+    std::cout << "Attempt limit per round: " << ATTEMPT_INCREMENT << std::endl;
     std::cout << "========================================\n" << std::endl;
 
     while (!transactionPool.empty()) {
         blockNumber++;
 
         int txCount = std::min(txPerBlock, (int)transactionPool.size());
-        std::vector<Transaction> blockTransactions(
-            transactionPool.begin(),
-            transactionPool.begin() + txCount
-        );
-
+        
         std::cout << "\n--- Block " << blockNumber << " ---" << std::endl;
         std::cout << "Selected " << txCount << " transactions" << std::endl;
         std::cout << "Remaining in pool: " << (transactionPool.size() - txCount) << std::endl;
 
-        auto startTime = std::chrono::high_resolution_clock::now();
-        Block block(prevHash, difficulty, blockTransactions);
-        auto endTime = std::chrono::high_resolution_clock::now();
+        std::random_device rd;
+        std::mt19937 g(rd());
+        
+        int totalTxNeeded = std::min(txCount * NUM_THREADS, (int)transactionPool.size());
+        std::vector<Transaction> availableTransactions(
+            transactionPool.begin(),
+            transactionPool.begin() + totalTxNeeded
+        );
+        std::shuffle(availableTransactions.begin(), availableTransactions.end(), g);
 
+        std::vector<std::vector<Transaction>> threadTxSets(NUM_THREADS);
+        for (int i = 0; i < NUM_THREADS; i++) {
+            int startIdx = i * txCount;
+            int endIdx = std::min(startIdx + txCount, (int)availableTransactions.size());
+            
+            if (startIdx < availableTransactions.size()) {
+                threadTxSets[i] = std::vector<Transaction>(
+                    availableTransactions.begin() + startIdx,
+                    availableTransactions.begin() + endIdx
+                );
+            }
+        }
+        std::vector<Block> candidateBlocks;
+        for (int i = 0; i < NUM_THREADS; i++) {
+            if (!threadTxSets[i].empty()) {
+                candidateBlocks.push_back(Block(prevHash, difficulty, threadTxSets[i]));
+            } else {
+                candidateBlocks.push_back(Block(prevHash, difficulty, std::vector<Transaction>()));
+            }
+        }
+        bool blockMined = false;
+        int currentAttemptLimit = ATTEMPT_INCREMENT;
+        int retryCount = 0;
+        std::atomic<int> winnerThread(-1); 
+        auto startTime = std::chrono::high_resolution_clock::now();
+
+        while (!blockMined) {
+            std::atomic<bool> stopFlag(false);
+            #pragma omp parallel num_threads(NUM_THREADS)
+            {
+                int threadId = omp_get_thread_num();
+                
+                if (!threadTxSets[threadId].empty()) {
+                    bool success = candidateBlocks[threadId].mineBlockParallel(stopFlag, ATTEMPT_INCREMENT);
+                    
+                    if (success) {
+                        #pragma omp critical
+                        {
+                            if (winnerThread == -1) {
+                                winnerThread = threadId;
+                                stopFlag = true;
+                                blockMined = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (blockMined) {
+                break; 
+            }
+
+            retryCount++;
+            currentAttemptLimit += ATTEMPT_INCREMENT;
+            
+            std::cout << "Failed to mine block with " << (currentAttemptLimit - ATTEMPT_INCREMENT) 
+                      << " attempts per thread. Retrying with " << currentAttemptLimit 
+                      << " attempts per thread..." << std::endl;
+        }
+
+        auto endTime = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
 
-        std::cout << "Block hash: " << block.getBlockHash() << std::endl;
-        std::cout << "Merkle root: " << block.getHeader().getMerkleRoot() << std::endl;
-        std::cout << "Nonce found: " << block.getHeader().getNonce() << std::endl;
-        std::cout << "Mining time: " << duration.count() << "ms" << std::endl;
+        int totalAttempts = 0;
+        for (int i = 0; i < NUM_THREADS; i++) {
+            if (!threadTxSets[i].empty()) {
+                totalAttempts += candidateBlocks[i].getAttempts();
+            }
+        }
 
-        processTransactions(blockTransactions, users);
+        int winner = winnerThread.load();
+        if (winner >= 0 && winner < NUM_THREADS) {
+            Block& winningBlock = candidateBlocks[winner];
+            
+            std::cout << "Block mined by Thread " << (winner + 1) << std::endl;
+            
+            std::cout << "Block hash: " << winningBlock.getBlockHash() << std::endl;
+            std::cout << "Merkle root: " << winningBlock.getHeader().getMerkleRoot() << std::endl;
+            std::cout << "Nonce found: " << winningBlock.getHeader().getNonce() << std::endl;
+            std::cout << "Winner's attempts: " << winningBlock.getAttempts() << std::endl;
+            std::cout << "Total attempts (all 5 threads): " << totalAttempts << std::endl;
+            std::cout << "Mining time: " << duration.count() << "ms" << std::endl;
+            processTransactions(winningBlock.getTransactions(), users);
 
-        transactionPool.erase(transactionPool.begin(), transactionPool.begin() + txCount);
+            transactionPool.erase(
+                transactionPool.begin(),
+                transactionPool.begin() + winningBlock.getTransactions().size()
+            );
 
-        blockchain.push_back(block);
-        prevHash = block.getBlockHash();
+            blockchain.push_back(winningBlock);
+            prevHash = winningBlock.getBlockHash();
+        }
     }
 
     return blockchain;

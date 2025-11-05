@@ -5,17 +5,19 @@ ifeq ($(OS),Windows_NT)
     EXE = .exe
     LIBS = -lssl -lcrypto -lws2_32 -lcrypt32
     SEP = \\
+    OMPFLAG = -fopenmp
 else
-    # macOS
+    # macOS/Linux
     RM = rm -f
     RM_DIR = rm -rf
     EXE = 
     LIBS = -lssl -lcrypto
     SEP = /
+    OMPFLAG = -fopenmp
 endif
 
 CXX = g++
-CXXFLAGS = -std=c++17 -O3
+CXXFLAGS = -std=c++17 -O3 $(OMPFLAG)
 INCLUDES = -Iinclude -Ihash
 
 # Main program

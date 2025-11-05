@@ -2,11 +2,11 @@
 #include "customGenerator.h"
 #include <iostream>
 #include <iomanip>
+#include <atomic>
 
 Block::Block(const string& prevHash, int difficulty, const vector<Transaction>& txs)
-    : header(prevHash, difficulty), transactions(txs) {
+    : header(prevHash, difficulty), transactions(txs), attempts(0) {
     buildMerkleTree();
-    mineBlock();  
 }
 
 void Block::buildMerkleTree() {
@@ -37,23 +37,39 @@ string Block::calculateBlockHash() {
     return hasher.generateHash(data);
 }
 
-void Block::mineBlock() {
-    header.resetNonce(); 
+bool Block::mineBlockParallel(atomic<bool>& stopFlag, int maxAttempts) {
+    int attemptsThisRound = 0;
+    while (!stopFlag.load() && attemptsThisRound < maxAttempts) {
+        blockHash = calculateBlockHash();
+        attempts++;
+        attemptsThisRound++;
 
+        if (isHashValid(blockHash, header.getDifficulty())) {
+            return true;  
+        }
+
+        header.incrementNonce();
+    }
+    return false;  
+}
+
+void Block::mineBlock() {
+    header.resetNonce();
+    attempts = 0;
+    
     cout << "Mining block..." << endl;
-    int attempts = 0;
 
     while (true) {
         blockHash = calculateBlockHash();
+        attempts++;
 
         if (isHashValid(blockHash, header.getDifficulty())) {
             cout << "Block mined! Nonce: " << header.getNonce()
-                 << " (after " << attempts + 1 << " attempts)" << endl;
+                 << " (after " << attempts << " attempts)" << endl;
             break;
         }
 
         header.incrementNonce();
-        attempts++;
     }
 }
 
@@ -78,6 +94,7 @@ void Block::print() const {
     cout << "Timestamp: " << header.getTimestamp() << endl;
     cout << "Difficulty: " << header.getDifficulty() << endl;
     cout << "Nonce: " << header.getNonce() << endl;
+    cout << "Attempts: " << attempts << endl;
     cout << "Transactions: " << transactions.size() << endl;
     cout << "================================\n" << endl;
 }
