@@ -81,6 +81,31 @@ bool processTransactions(const std::vector<Transaction>& transactions,
     return true;
 }
 
+bool validateTransaction(const Transaction& tx, const std::unordered_map<std::string, User>& users) {
+    auto senderIt = users.find(tx.getSender());
+    if (senderIt == users.end()) {
+       // std::cerr << "Invalid transaction: sender not found" << std::endl;
+        return false;
+    }
+    
+    if (senderIt->second.getBalance() < tx.getAmount()) {
+        //std::cerr << "Invalid transaction: insufficient balance. Sender has " << senderIt->second.getBalance() << " but trying to send " << tx.getAmount() << std::endl;
+        return false;
+    }
+    
+    HashGenerator hasher;
+    std::string expectedId = hasher.generateHash(
+        tx.getSender() + tx.getReceiver() + std::to_string(tx.getAmount())
+    );
+    
+    if (tx.getTransactionId() != expectedId) {
+        //std::cerr << "Invalid transaction: transaction ID mismatch" << std::endl;
+        return false;
+    }
+    
+    return true;
+}
+
 std::vector<Block> mineBlockchain(std::vector<Transaction>& transactionPool,
                                   std::unordered_map<std::string, User>& users,
                                   int txPerBlock,
@@ -102,19 +127,37 @@ std::vector<Block> mineBlockchain(std::vector<Transaction>& transactionPool,
     while (!transactionPool.empty()) {
         blockNumber++;
 
-        int txCount = std::min(txPerBlock, (int)transactionPool.size());
+        std::vector<Transaction> validTransactions;
+        int invalidCount = 0;
         
+        for (const auto& tx : transactionPool) {
+            if (validateTransaction(tx, users)) {
+                validTransactions.push_back(tx);
+            } else {
+                invalidCount++;
+            }
+        }
+
+        if (validTransactions.empty()) {
+            std::cerr << "No valid transactions remaining in pool. Stopping." << std::endl;
+            break;
+        }
+
         std::cout << "\n--- Block " << blockNumber << " ---" << std::endl;
-        std::cout << "Selected " << txCount << " transactions" << std::endl;
-        std::cout << "Remaining in pool: " << (transactionPool.size() - txCount) << std::endl;
+       std::cout << "Valid transactions: " << validTransactions.size() << std::endl;
+       std::cout << "Invalid transactions filtered: " << invalidCount << std::endl;
+
+        int txCount = std::min(txPerBlock, (int)validTransactions.size());
+       std::cout << "Selected " << txCount << " transactions" << std::endl;
+        std::cout << "Remaining in pool: " << (validTransactions.size() - txCount) << std::endl;
 
         std::random_device rd;
         std::mt19937 g(rd());
         
-        int totalTxNeeded = std::min(txCount * NUM_THREADS, (int)transactionPool.size());
+        int totalTxNeeded = std::min(txCount * NUM_THREADS, (int)validTransactions.size());
         std::vector<Transaction> availableTransactions(
-            transactionPool.begin(),
-            transactionPool.begin() + totalTxNeeded
+            validTransactions.begin(),
+            validTransactions.begin() + totalTxNeeded
         );
         std::shuffle(availableTransactions.begin(), availableTransactions.end(), g);
 
@@ -193,18 +236,24 @@ std::vector<Block> mineBlockchain(std::vector<Transaction>& transactionPool,
             Block& winningBlock = candidateBlocks[winner];
             
             std::cout << "Block mined by Thread " << (winner + 1) << std::endl;
-            
             std::cout << "Block hash: " << winningBlock.getBlockHash() << std::endl;
             std::cout << "Merkle root: " << winningBlock.getHeader().getMerkleRoot() << std::endl;
             std::cout << "Nonce found: " << winningBlock.getHeader().getNonce() << std::endl;
             std::cout << "Winner's attempts: " << winningBlock.getAttempts() << std::endl;
-            std::cout << "Total attempts (all 5 threads): " << totalAttempts << std::endl;
+            //std::cout << "Total attempts (all 5 threads): " << totalAttempts << std::endl;
             std::cout << "Mining time: " << duration.count() << "ms" << std::endl;
             processTransactions(winningBlock.getTransactions(), users);
 
+            auto winningTxs = winningBlock.getTransactions();
             transactionPool.erase(
-                transactionPool.begin(),
-                transactionPool.begin() + winningBlock.getTransactions().size()
+                std::remove_if(transactionPool.begin(), transactionPool.end(),
+                    [&winningTxs](const Transaction& tx) {
+                        return std::any_of(winningTxs.begin(), winningTxs.end(),
+                            [&tx](const Transaction& winTx) {
+                                return tx.getTransactionId() == winTx.getTransactionId();
+                            });
+                    }),
+                transactionPool.end()
             );
 
             blockchain.push_back(winningBlock);
@@ -241,27 +290,3 @@ void saveBlockchainToFile(const std::vector<Block>& blockchain, const std::strin
 }
 
 
-bool validateTransaction(const Transaction& tx, const std::unordered_map<std::string, User>& users) {
-    auto senderIt = users.find(tx.getSender());
-    if (senderIt == users.end()) {
-        std::cerr << "Invalid transaction: sender not found" << std::endl;
-        return false;
-    }
-    
-    if (senderIt->second.getBalance() < tx.getAmount()) {
-        std::cerr << "Invalid transaction: insufficient balance. Sender has " << senderIt->second.getBalance() << " but trying to send " << tx.getAmount() << std::endl;
-        return false;
-    }
-    
-    HashGenerator hasher;
-    std::string expectedId = hasher.generateHash(
-        tx.getSender() + tx.getReceiver() + std::to_string(tx.getAmount())
-    );
-    
-    if (tx.getTransactionId() != expectedId) {
-        std::cerr << "Invalid transaction: transaction ID mismatch" << std::endl;
-        return false;
-    }
-    
-    return true;
-}
