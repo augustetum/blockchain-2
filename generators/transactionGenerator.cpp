@@ -4,7 +4,7 @@
 #include <sstream>
 #include <iomanip>
 #include "../User.h"
-#include "../hash/customGenerator.h"
+#include "../customGenerator.h"
 #include "../Transaction.h"
 using std::string;
 

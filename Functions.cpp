@@ -5,6 +5,7 @@
 #include <chrono>
 #include "User.h"
 #include <unordered_map>
+#include "customGenerator.h"
 #include "Transaction.h"
 #include "Block.h"
 using std::string;
@@ -149,4 +150,30 @@ void saveBlockchainToFile(const std::vector<Block>& blockchain, const std::strin
 
     file.close();
     std::cout << "\nBlockchain saved to " << filename << std::endl;
+}
+
+
+bool validateTransaction(const Transaction& tx, const std::unordered_map<std::string, User>& users) {
+    auto senderIt = users.find(tx.getSender());
+    if (senderIt == users.end()) {
+        std::cerr << "Invalid transaction: sender not found" << std::endl;
+        return false;
+    }
+    
+    if (senderIt->second.getBalance() < tx.getAmount()) {
+        std::cerr << "Invalid transaction: insufficient balance. Sender has " << senderIt->second.getBalance() << " but trying to send " << tx.getAmount() << std::endl;
+        return false;
+    }
+    
+    HashGenerator hasher;
+    std::string expectedId = hasher.generateHash(
+        tx.getSender() + tx.getReceiver() + std::to_string(tx.getAmount())
+    );
+    
+    if (tx.getTransactionId() != expectedId) {
+        std::cerr << "Invalid transaction: transaction ID mismatch" << std::endl;
+        return false;
+    }
+    
+    return true;
 }

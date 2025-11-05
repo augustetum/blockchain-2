@@ -17,7 +17,7 @@ string Transaction::getTransactionId() const { return transactionID; }
 string Transaction::calculateTransactionId() const {
     HashGenerator hasher;
     string data = senderKey + receiverKey + to_string(amount);
-    string hash = hasher.generateHash(data); //Difficulty 0, nes nereikia leading zeros transakcijom
+    string hash = hasher.generateHash(data); 
     return hash;
 }
 
