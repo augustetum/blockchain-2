@@ -169,7 +169,7 @@ std::vector<Block> mineBlockchain(std::vector<Transaction>& transactionPool,
         if (winner >= 0 && winner < NUM_THREADS) {
             Block& winningBlock = candidateBlocks[winner];
             
-            std::cout << "\n>>> Block mined by Thread " << (winner + 1) << " <<<" << std::endl;
+            std::cout << "Block mined by Thread " << (winner + 1) << std::endl;
             std::cout << "Block hash: " << winningBlock.getBlockHash() << std::endl;
             std::cout << "Merkle root: " << winningBlock.getHeader().getMerkleRoot() << std::endl;
             std::cout << "Nonce found: " << winningBlock.getHeader().getNonce() << std::endl;
