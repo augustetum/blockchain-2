@@ -10,19 +10,26 @@ This program depicts a functional blockchain implementation:
 This implementation uses our previously made LIDL hash, which was enhanced with AI (_Sonnet 4.5_ model) to increase the resistance of collisions, for all cryptographic operations such as users hash, transactions IDs, Merke roots and block hashes, which start with zeros (the number of ‘0’ is based on the user chosen difficulty).
 
 ## Features
--	Generating transactions ID
+-	Parallel Proof-of-Work Mining: Multi-threaded mining using OpenMP 
 -	Merkle tree implementation _([implemented using this](https://codetrips.com/2020/08/02/modern-c-implementing-a-merkle-tree/))_
--	PoW mining with the difficulty zeros in the beginning of the hash
--	Outputting mining process to terminal and txt files
+-	Transaction Validation: Balance checking and transaction ID verification with UTXO model
+-	Custom Hash Function: LIDL hash enhanced for collision resistance
+-   Multiple threads compete to mine each block
 
 ## Running
-1.	Clone repository 
+### 1.	Clone repository 
 `git clone https://github.com/augustetum/blockchain-2.git`
-2.	Open cloned repository 
+### 2.	Open cloned repository 
 `cd blockchain-2`
-3.	Run the program
+### 3.	Build everything
 `make run`
-4. To clean *.o *.exe files run
+### 4. Build only main program
+`make blockchain`
+### 5. Build user generator
+`make usergen`
+### 6. Build transaction generator
+`make txgen`
+### 7. To clean *.o *.exe files run
 `make clean`
 > These Makefile commands work on Windows, MacOS, Linux
 
@@ -70,3 +77,30 @@ This implementation uses our previously made LIDL hash, which was enhanced with 
 - Transactions remaining in pool: 0
 < blockchain saved to blockchain.txt, updated user balances saved to users_updated.txt
 
+## Parallel mining implementation with OpenMP
+
+Multiple threads simultaneously attempt to mine the same block with different transaction sets, and the first thread to find a valid nonce wins. The implementation of OpenMP was writen with the help of AI _(Sonnet 4.5 model)_
+
+Each thread gets its own candidate block with:
+- Same previous hash (maintaining chain)
+- Same difficulty target
+
+### Mining Process:
+- Five different blocks (for five threads) are generated
+- Threads attempt to mine these blocks 
+- Each thread check if another thread won _(stopFlag)_ while mining
+- Each thread calculate hash with current nonce
+- Validation happens by checking leading zeros 
+- If valid → return true
+- Block (which was mined first) is added to a blockchain
+- Other blocks are terminated
+
+
+## Difficulty impact analysis
+| Difficulty | Avg Attempts | Avg Time | Probability |
+|-----------|--------------|----------|-------------|
+| 1         | ~16          | ~2ms     | 1/16        |
+| 2         | ~256         | ~8ms     | 1/256       |
+| 3         | ~4096        | ~35ms    | 1/4096      |
+| 4         | ~65536       | ~500ms   | 1/65536     |
+| 5         | ~1048576     | ~8s      | 1/1048576   |
