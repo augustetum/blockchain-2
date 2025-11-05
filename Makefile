@@ -9,14 +9,15 @@ else
     # macOS
     RM = rm -f
     RM_DIR = rm -rf
-    EXE = 
-    LIBS = -lssl -lcrypto
+    EXE =
+    OPENSSL_PATH = $(shell brew --prefix openssl 2>/dev/null || echo "/usr/local/opt/openssl")
+    LIBS = -L$(OPENSSL_PATH)/lib -lssl -lcrypto
     SEP = /
 endif
 
 CXX = g++
 CXXFLAGS = -std=c++17 -O3
-INCLUDES = -Iinclude -Ihash
+INCLUDES = -Iinclude -Ihash -I$(OPENSSL_PATH)/include
 
 # Main program
 blockchain$(EXE): Program.o Block.o BlockHeader.o Transaction.o Functions.o merkleTree.o customGenerator.o
