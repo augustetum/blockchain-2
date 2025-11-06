@@ -121,12 +121,12 @@ A UTXO model was also constructed for this program. It was done while (almost) e
 1. Load genesis UTXOs (1000 users, each with 1 UTXO)
 2. Load transactions from file (reconstruct with UTXO inputs/outputs)
 3. Mining loop:
-   ├─ Validate transactions against current UTXO set
-   ├─ Select up to 100 valid transactions
-   ├─ All 5 threads mine the same block with different nonces
-   ├─ First thread to find valid hash wins
-   ├─ Apply winning block: remove input UTXOs, add output UTXOs
-   └─ Repeat until no valid transactions remain
+- Validate transactions against current UTXO set
+- Select up to 100 valid transactions
+- All 5 threads mine the same block with different nonces
+- First thread to find valid hash wins
+- Apply winning block: remove input UTXOs, add output UTXOs
+- Repeat until no valid transactions remain
 4. Save final UTXO state to file
 
 ### Examples
