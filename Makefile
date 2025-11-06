@@ -5,23 +5,26 @@ ifeq ($(OS),Windows_NT)
     EXE = .exe
     LIBS = -lssl -lcrypto -lws2_32 -lcrypt32
     SEP = \\
+    OMPFLAG = -fopenmp
 else
-    # macOS
+    # macOS/Linux
     RM = rm -f
     RM_DIR = rm -rf
     EXE =
     OPENSSL_PATH = $(shell brew --prefix openssl 2>/dev/null || echo "/usr/local/opt/openssl")
-    LIBS = -L$(OPENSSL_PATH)/lib -lssl -lcrypto
+    LIBOMP_PATH = $(shell brew --prefix libomp 2>/dev/null || echo "/usr/local/opt/libomp")
+    LIBS = -L$(OPENSSL_PATH)/lib -L$(LIBOMP_PATH)/lib -lssl -lcrypto -lomp
     SEP = /
+    OMPFLAG = -Xpreprocessor -fopenmp -I$(LIBOMP_PATH)/include
 endif
 
 CXX = g++
-CXXFLAGS = -std=c++17 -O3
+CXXFLAGS = -std=c++17 -O3 $(OMPFLAG)
 INCLUDES = -Iinclude -Ihash -I$(OPENSSL_PATH)/include
 
 # Main program
-blockchain$(EXE): Program.o Block.o BlockHeader.o Transaction.o Functions.o merkleTree.o customGenerator.o
-	$(CXX) $(CXXFLAGS) Program.o Block.o BlockHeader.o Transaction.o Functions.o merkleTree.o customGenerator.o -o blockchain$(EXE) $(LIBS)
+blockchain$(EXE): Program.o Block.o BlockHeader.o Transaction.o Functions.o merkleTree.o customGenerator.o UTXOSet.o
+	$(CXX) $(CXXFLAGS) Program.o Block.o BlockHeader.o Transaction.o Functions.o merkleTree.o customGenerator.o UTXOSet.o -o blockchain$(EXE) $(LIBS)
 
 Program.o: Program.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c Program.cpp -o Program.o
@@ -43,6 +46,9 @@ merkleTree.o: merkleTree.cpp merkleTree.h
 
 customGenerator.o: customGenerator.cpp customGenerator.h
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c customGenerator.cpp -o customGenerator.o
+
+UTXOSet.o: UTXOSet.cpp UTXOSet.h
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c UTXOSet.cpp -o UTXOSet.o
 
 usergen$(EXE): generators/userGenerator.o customGenerator.o
 	$(CXX) $(CXXFLAGS) generators/userGenerator.o customGenerator.o -o usergen$(EXE) $(LIBS)
